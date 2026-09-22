@@ -3,9 +3,11 @@ import joblib
 import pandas as pd
 import streamlit as st
 
+
 # ==========================================
 # 1. PAGE CONFIGURATION & MODEL LOADING
 # ==========================================
+
 st.set_page_config(
     page_title="LiverGuard Predict",
     page_icon="🫁",
@@ -13,209 +15,467 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+
 @st.cache_resource
 def load_model_and_scaler():
     """
-    Loads trained Logistic Regression model and StandardScaler pipeline.
-    Uses st.cache_resource to avoid re-loading artifacts on every Streamlit rerun.
+    Load the trained Logistic Regression model
+    and StandardScaler.
     """
+
     model_path = "model/liver_model.pkl"
     scaler_path = "model/scaler.pkl"
 
     if not os.path.exists(model_path) or not os.path.exists(scaler_path):
         st.error(
-            "⚠️ Model or Scaler file not found! "
-            "Please run `python train_model.py` first to generate `model/liver_model.pkl` and `model/scaler.pkl`."
+            "⚠️ Model or Scaler file not found. "
+            "Please run train_model.py first."
         )
         return None, None
 
     model = joblib.load(model_path)
     scaler = joblib.load(scaler_path)
+
     return model, scaler
 
 
 # ==========================================
-# 2. UI INPUT MODULES (SLIDERS & SELECTS)
+# 2. USER INPUT MODULES
 # ==========================================
-def render_patient_demographics():
-    """Module for basic patient demographic details."""
-    st.subheader("1. Patient Demographics")
+
+def render_patient_information():
+    """
+    Collect basic patient information.
+    """
+
+    st.subheader("1. Patient Information")
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
-        age = st.slider("Age", min_value=1, max_value=120, value=45)
+        age = st.slider(
+            "Age",
+            min_value=1,
+            max_value=120,
+            value=45,
+            help="Enter the patient's age in years."
+        )
+
     with col2:
-        gender = st.selectbox("Gender", options=["Male", "Female"])
-        
+        gender = st.selectbox(
+            "Gender",
+            options=["Male", "Female"],
+            help="Select the patient's gender."
+        )
+
     return age, gender
 
 
-def render_bilirubin_metrics():
-    """Module for Bilirubin level."""
-    st.subheader("2. Bilirubin Metrics")
-    
-    total_bilirubin = st.slider("Total Bilirubin (mg/dL)", min_value=0.0, max_value=50.0, value=0.8, step=0.1)
-        
+def render_bilirubin():
+    """
+    Collect bilirubin information.
+    """
+
+    st.subheader("2. Bilirubin Level")
+
+    total_bilirubin = st.slider(
+        "Bilirubin Level (Total Bilirubin)",
+        min_value=0.0,
+        max_value=50.0,
+        value=0.8,
+        step=0.1,
+        help=(
+            "Enter the Total Bilirubin value from the patient's "
+            "blood test report. Unit: mg/dL."
+        )
+    )
+
+    st.caption(
+        "💡 Bilirubin is a substance measured in blood that can "
+        "provide information about liver function."
+    )
+
     return total_bilirubin
 
 
-def render_enzyme_metrics():
-    """Module for liver enzymes."""
-    st.subheader("3. Liver Enzymes")
+def render_liver_enzymes():
+    """
+    Collect ALT and AST values.
+    """
+
+    st.subheader("3. Liver Enzyme Levels")
+
+    st.caption(
+        "💡 ALT and AST are enzymes commonly measured in blood "
+        "tests to provide information about liver health."
+    )
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
-        alt = st.slider("Alamine Aminotransferase - ALT (IU/L)", min_value=0, max_value=2000, value=35)
+        alt = st.slider(
+            "ALT",
+            min_value=0,
+            max_value=2000,
+            value=35,
+            help=(
+                "Enter the ALT value from the blood test report. "
+                "Unit: IU/L."
+            )
+        )
+
     with col2:
-        ast = st.slider("Aspartate Aminotransferase - AST (IU/L)", min_value=0, max_value=2000, value=40)
-        
+        ast = st.slider(
+            "AST",
+            min_value=0,
+            max_value=2000,
+            value=40,
+            help=(
+                "Enter the AST value from the blood test report. "
+                "Unit: IU/L."
+            )
+        )
+
     return alt, ast
 
 
-def render_protein_metrics():
-    """Module for protein level."""
+def render_protein_level():
+    """
+    Collect total protein value.
+    """
+
     st.subheader("4. Protein Level")
-    
-    total_proteins = st.slider("Total Proteins (g/dL)", min_value=0.0, max_value=15.0, value=6.8, step=0.1)
-        
+
+    total_proteins = st.slider(
+        "Total Protein Level",
+        min_value=0.0,
+        max_value=15.0,
+        value=6.8,
+        step=0.1,
+        help=(
+            "Enter the Total Protein value from the patient's "
+            "blood test report. Unit: g/dL."
+        )
+    )
+
+    st.caption(
+        "💡 Total protein measures the amount of certain proteins "
+        "present in the blood."
+    )
+
     return total_proteins
 
 
-def render_medical_advice(disease_prob):
+# ==========================================
+# 3. HEALTH GUIDANCE
+# ==========================================
+
+def render_health_guidance(disease_prob):
     """
-    Renders tailored medical and exercise recommendations based on disease probability.
+    Display general health guidance based on the
+    estimated model probability.
     """
-    st.subheader("💡 Personalised Medical & Lifestyle Recommendations")
-    
+
+    st.subheader("💡 Health Guidance")
+
+    # ==========================================
+    # HIGHER PREDICTED RISK GUIDANCE
+    # ==========================================
+
     if disease_prob >= 70.0:
-        st.warning("### Risk Level: High Risk")
-        
+
         col1, col2 = st.columns(2)
+
         with col1:
-            st.markdown("""
-            **🩺 Medical Next Steps:**
-            * **Consult a Specialist:** Schedule an immediate evaluation with a Hepatologist or Gastroenterologist.
-            * **Further Testing:** Request comprehensive imaging (e.g., Liver Ultrasound, FibroScan) and a full Hepatitis panel.
-            * **Medication Review:** Have a physician review all active prescriptions, OTC drugs, and supplements to avoid drug-induced liver injury.
-            * **Avoid Hepatotoxins:** Strictly eliminate alcohol consumption and avoid unverified herbal supplements.
-            """)
+            st.markdown(
+                """
+                **🩺 What you can consider doing:**
+
+                - Consider discussing this result with a qualified healthcare professional.
+                - A healthcare professional may recommend additional blood tests or other examinations.
+                - Share your complete blood-test report with your doctor.
+                - Avoid taking medicines or supplements without appropriate medical advice.
+                """
+            )
+
         with col2:
-            st.markdown("""
-            **🏋️ Exercise & Lifestyle Protocol:**
-            * **Light Aerobic Activity:** Engage in low-impact walking or gentle cycling (20–30 minutes daily). Avoid intense overexertion.
-            * **Dietary Adjustments:** Focus on an anti-inflammatory diet rich in vegetables, lean proteins, and low in sodium and saturated fats.
-            * **Hydration:** Maintain optimal hydration unless fluid restriction has been explicitly advised by a doctor.
-            """)
-            
-    elif 30.0 <= disease_prob < 70.0:
-        st.info("### Risk Level: Moderate Risk")
-        
+            st.markdown(
+                """
+                **🏃 General Healthy Habits:**
+
+                - Stay physically active according to your ability.
+                - Maintain a balanced and nutritious diet.
+                - Avoid excessive alcohol consumption.
+                - Maintain adequate hydration unless a healthcare professional has advised otherwise.
+                """
+
+            )
+
+    # ==========================================
+    # MODERATE PREDICTED RISK GUIDANCE
+    # ==========================================
+
+    elif disease_prob >= 30.0:
+
         col1, col2 = st.columns(2)
+
         with col1:
-            st.markdown("""
-            **🩺 Medical Next Steps:**
-            * **Primary Care Follow-up:** Schedule a routine check-up with your primary care physician within 2–4 weeks.
-            * **Repeat LFTs:** Monitor enzyme trends (ALT, AST, Bilirubin) with follow-up blood tests as advised by your doctor.
-            * **Limit Alcohol:** Reduce or completely eliminate alcohol intake to minimize liver strain.
-            """)
+            st.markdown(
+                """
+                **🩺 What you can consider doing:**
+
+                - Consider discussing this result with a healthcare professional.
+                - Keep your blood-test reports available for comparison during future check-ups.
+                - Follow up with a healthcare professional if you have symptoms or concerns.
+                - Avoid unnecessary self-medication.
+                """
+            )
+
         with col2:
-            st.markdown("""
-            **🏋️ Exercise & Lifestyle Protocol:**
-            * **Moderate Cardio:** Target 150 minutes per week of moderate-intensity cardio (brisk walking, swimming, cycling).
-            * **Weight Management:** Focus on gradual, sustainable weight loss if BMI is elevated to reduce hepatic fat accumulation.
-            * **Balanced Nutrition:** Adopt a Mediterranean-style diet low in processed sugars and refined carbohydrates.
-            """)
-            
+            st.markdown(
+                """
+                **🏃 General Healthy Habits:**
+
+                - Maintain regular physical activity.
+                - Follow a balanced diet.
+                - Avoid excessive alcohol consumption.
+                - Maintain a healthy body weight where appropriate.
+                """
+            )
+
+    # ==========================================
+    # LOWER PREDICTED RISK GUIDANCE
+    # ==========================================
+
     else:
-        st.success("### Risk Level: Low Risk")
-        
+
         col1, col2 = st.columns(2)
+
         with col1:
-            st.markdown("""
-            **🩺 Medical Next Steps:**
-            * **Routine Check-ups:** Continue regular annual health screenings and blood panels with your healthcare provider.
-            * **Preventative Care:** Stay up-to-date with vaccinations (e.g., Hepatitis A and B).
-            * **Medication Care:** Always follow dosage instructions for over-the-counter painkillers like acetaminophen/paracetamol.
-            """)
+            st.markdown(
+                """
+                **🩺 General Health Guidance:**
+
+                - Continue regular health check-ups.
+                - Follow recommendations provided by your healthcare professional.
+                - Keep your health and blood-test records for future reference.
+                - Contact a healthcare professional if you develop symptoms or concerns.
+                """
+            )
+
         with col2:
-            st.markdown("""
-            **🏋️ Exercise & Lifestyle Protocol:**
-            * **Regular Exercise:** Maintain a mix of aerobic conditioning and resistance training (3–5 times per week).
-            * **Maintain Healthy Weight:** Continue balanced eating rich in high-fiber foods, whole grains, and healthy fats.
-            * **Hydration:** Maintain good daily hydration and moderate alcohol intake.
-            """)
+            st.markdown(
+                """
+                **🏃 General Healthy Habits:**
 
-    st.caption("⚠️ **Disclaimer:** This tool provides automated predictions based on machine learning algorithms and does not constitute official medical advice or diagnosis. Always consult a qualified medical professional.")
+                - Stay physically active.
+                - Eat a balanced and nutritious diet.
+                - Maintain a healthy body weight.
+                - Stay adequately hydrated.
+                """
+            )
+
+    st.caption(
+        "⚠️ This application provides an ML-based prediction for "
+        "educational and informational purposes. It is not a medical "
+        "diagnosis and should not replace advice from a qualified "
+        "healthcare professional."
+    )
 
 
 # ==========================================
-# 3. MAIN APPLICATION PIPELINE
+# 4. MAIN APPLICATION
 # ==========================================
+
 def main():
+
+    # ==========================================
+    # HEADER
+    # ==========================================
+
     st.title("🫁 LiverGuard Predict")
-    st.markdown("Enter the patient's lab results and clinical metrics below to assess liver disease risk.")
+
+    st.markdown(
+        """
+        Enter the patient's information and blood-test values
+        to estimate the predicted risk of liver disease.
+        """
+    )
+
     st.divider()
+
+    # ==========================================
+    # LOAD MODEL
+    # ==========================================
 
     model, scaler = load_model_and_scaler()
 
-    # Form encapsulating all modular input components
+    # ==========================================
+    # INPUT FORM
+    # ==========================================
+
     with st.form(key="liver_prediction_form"):
-        age, gender = render_patient_demographics()
-        st.divider()
-        
-        total_bilirubin = render_bilirubin_metrics()
-        st.divider()
-        
-        alt, ast = render_enzyme_metrics()
-        st.divider()
-        
-        total_proteins = render_protein_metrics()
+
+        # --------------------------------------
+        # 1. Patient Information
+        # --------------------------------------
+
+        age, gender = render_patient_information()
+
         st.divider()
 
-        submit_button = st.form_submit_button(label="Predict Liver Disease Risk", use_container_width=True)
+        # --------------------------------------
+        # 2. Bilirubin
+        # --------------------------------------
 
-    # Form execution & inference output
+        total_bilirubin = render_bilirubin()
+
+        st.divider()
+
+        # --------------------------------------
+        # 3. Liver Enzymes
+        # --------------------------------------
+
+        alt, ast = render_liver_enzymes()
+
+        st.divider()
+
+        # --------------------------------------
+        # 4. Protein
+        # --------------------------------------
+
+        total_proteins = render_protein_level()
+
+        st.divider()
+
+        # --------------------------------------
+        # PREDICT BUTTON
+        # --------------------------------------
+
+        submit_button = st.form_submit_button(
+            label="🔍 Check Liver Disease Risk",
+            use_container_width=True
+        )
+
+    # ==========================================
+    # PREDICTION
+    # ==========================================
+
     if submit_button:
+
         if model is None or scaler is None:
-            st.error("Cannot perform prediction because the model or scaler artifacts are missing.")
+
+            st.error(
+                "Prediction cannot be performed because "
+                "the model or scaler is missing."
+            )
+
             return
 
-        # 1. Map inputs to match training encoding (Male -> 1, Female -> 0)
+        # ==========================================
+        # 1. ENCODE GENDER
+        # ==========================================
+
+        # Same encoding used during model training:
+        # Male = 1
+        # Female = 0
+
         gender_encoded = 1 if gender == "Male" else 0
 
-        # 2. Build DataFrame with exact 6 feature column names and order used in train_model.py
-        input_df = pd.DataFrame([{
-            "Age": age,
-            "Gender": gender_encoded,
-            "Total_Bilirubin": total_bilirubin,
-            "Alamine_Aminotransferase": alt,
-            "Aspartate_Aminotransferase": ast,
-            "Total_Protiens": total_proteins
-        }])
+        # ==========================================
+        # 2. CREATE MODEL INPUT
+        # ==========================================
 
-        # 3. Apply StandardScaler transform and predict
+        # IMPORTANT:
+        # These names must remain exactly the same
+        # as the training code.
+
+        input_df = pd.DataFrame(
+            [{
+                "Age": age,
+                "Gender": gender_encoded,
+                "Total_Bilirubin": total_bilirubin,
+                "Alamine_Aminotransferase": alt,
+                "Aspartate_Aminotransferase": ast,
+                "Total_Protiens": total_proteins
+            }]
+        )
+
+        # ==========================================
+        # 3. SCALE INPUT
+        # ==========================================
+
         scaled_features = scaler.transform(input_df)
-        prediction = model.predict(scaled_features)[0]
-        prediction_probabilities = model.predict_proba(scaled_features)[0]
 
-        # Extract probability of disease class (Class 1)
+        # ==========================================
+        # 4. MAKE PREDICTION
+        # ==========================================
+
+        prediction_probabilities = model.predict_proba(
+            scaled_features
+        )[0]
+
+        # Class 1 = Liver Disease
+
         disease_prob = prediction_probabilities[1] * 100
 
-        # 4. Render prediction results to user
-        st.subheader("Clinical Diagnostic Result")
-
-        if prediction == 1:
-            st.error("⚠️ **High Risk:** The model indicates a high likelihood of Liver Disease.")
-            st.metric(label="Estimated Probability of Liver Disease", value=f"{disease_prob:.1f}%")
-        else:
-            healthy_prob = prediction_probabilities[0] * 100
-            st.success("✅ **Low Risk:** The model indicates low likelihood of Liver Disease.")
-            st.metric(label="Estimated Confidence Score (Healthy)", value=f"{healthy_prob:.1f}%")
+        # ==========================================
+        # 5. DISPLAY RESULT
+        # ==========================================
 
         st.divider()
 
-        # 5. Render tailored advice based on Probability of Liver Disease
-        render_medical_advice(disease_prob)
+        st.subheader("📊 Prediction Details")
+
+        # ------------------------------------------
+        # Estimated Risk
+        # ------------------------------------------
+
+        st.metric(
+            label="Estimated Liver Disease Risk",
+            value=f"{disease_prob:.1f}%"
+        )
+
+        # ------------------------------------------
+        # Risk Category
+        # ------------------------------------------
+
+        if disease_prob >= 70.0:
+
+            st.error(
+                "🔴 **Higher Predicted Risk**\n\n"
+                "The model estimates a higher probability "
+                "of liver disease."
+            )
+
+        elif disease_prob >= 30.0:
+
+            st.warning(
+                "🟠 **Moderate Predicted Risk**\n\n"
+                "The model estimates a moderate probability "
+                "of liver disease."
+            )
+
+        else:
+
+            st.success(
+                "🟢 **Lower Predicted Risk**\n\n"
+                "The model estimates a lower probability "
+                "of liver disease."
+            )
+
+        # ==========================================
+        # 6. HEALTH GUIDANCE
+        # ==========================================
+
+        st.divider()
+
+        render_health_guidance(disease_prob)
+
+
+# ==========================================
+# 5. RUN APPLICATION
+# ==========================================
 
 if __name__ == "__main__":
     main()
