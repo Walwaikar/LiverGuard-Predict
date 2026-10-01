@@ -105,11 +105,6 @@ def render_liver_enzymes():
 
     st.subheader("3. Liver Enzyme Levels")
 
-    st.caption(
-        "💡 ALT and AST are enzymes commonly measured in blood "
-        "tests to provide information about liver health."
-    )
-
     col1, col2 = st.columns(2)
 
     with col1:
@@ -135,6 +130,11 @@ def render_liver_enzymes():
                 "Unit: IU/L."
             )
         )
+
+    st.caption(
+        "💡 ALT and AST are enzymes commonly measured in blood "
+        "tests to provide information about liver health."
+    )
 
     return alt, ast
 
@@ -208,7 +208,6 @@ def render_health_guidance(disease_prob):
                 - Avoid excessive alcohol consumption.
                 - Maintain adequate hydration unless a healthcare professional has advised otherwise.
                 """
-
             )
 
     # ==========================================
