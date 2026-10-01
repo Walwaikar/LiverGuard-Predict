@@ -79,7 +79,7 @@ def render_bilirubin():
     st.subheader("2. Bilirubin Level")
 
     total_bilirubin = st.slider(
-        "Bilirubin Level (Total Bilirubin)",
+        "Total Bilirubin",
         min_value=0.0,
         max_value=50.0,
         value=0.8,
